@@ -1,161 +1,76 @@
-# Hytale Plugin Template
+# HySampler
 
-A ready-to-use starting point for creating Hytale server plugins with Java, _or Kotlin_. If you've
-been using the Asset Editor and want to start writing server-side logic — custom commands, event
-handling, gameplay systems — this is the simplest place to begin.
+HySampler is a Hytale server-side plugin POC that mirrors DecentSampler's note-to-sample playback model:
 
-This template uses the [Hytale Gradle Plugin](https://github.com/AzureDoom/Hytale-Gradle-Plugin),
-a Gradle plugin maintained by AzureDoom for Hytale mod/plugin development. It handles the repetitive
-project setup work for you, including manifest generation, validation, local server runs, IDE source
-setup, and optional hosted Hytale Javadoc injection.
+- parse `<sample>` note zones (`rootNote`, `loNote`, `hiNote`, `loVel`, `hiVel`) from a `.dspreset`
+- map notes to pre-rendered audio samples
+- trigger mapped samples in-game via `SoundUtil.playSoundEvent3dToPlayer`
 
-## How to start
+This POC intentionally does **not** implement live synthesis, PCM generation, or runtime DSP modulation.
 
-1. Copy the template by downloading it or using the **Use this template** button.
-2. [Configure or install the Java SDK](https://hytalemodding.dev/en/docs/guides/plugin/setting-up-env)
-   to use Java 25. JetBrains Runtime is recommended for the best hot-reload/debugging experience.
-3. Open the project in your favorite IDE. We recommend
-   [IntelliJ IDEA](https://www.jetbrains.com/idea/download).
-4. Update the project values in `gradle.properties`:
-    - `rootProject.name` in `settings.gradle.kts`
-    - `group`
-    - `manifest_group`
-    - `mod_name`
-    - `mod_id`
-    - `main_class`
-    - `mod_author`
-    - `mod_description`
-    - `mod_url`
-5. Optionally run `./gradlew` if your IDE does not automatically sync the project.
-6. Prepare the Hytale development environment:
+## What this POC includes
 
-   ```bash
-   ./gradlew setupHytaleDev
-   ```
+- Rebranded plugin-template scaffold (`dev.hysampler.HySamplerPlugin`)
+- DecentSampler XML parser (`DecentSamplerPresetParser`)
+- Note/velocity lookup model (`DecentSamplerMapping`)
+- In-game trigger command:
+  - `/sampler play <note 0-127> [velocity 0-127]`
+- Minimal sample set (3 source samples covering the playable region from C3 to C5 by pitch-shifting)
+- Registered custom `SoundEvent` assets for the bundled samples
 
-7. Run the local development server:
+## Source material and licensing
 
-   ```bash
-   ./gradlew runServer
-   ```
+Source pack used:
+- Repository: https://github.com/DecentSamples/DecentSampler-Sample-Library-Examples
+- Preset: `example-001-boilerplate/Simple Preset Library.dspreset`
+- License: MIT (copied into `src/main/resources/hysampler/source/DecentSampler-Sample-Library-Examples-LICENSE`)
 
-> On Windows, use `./gradlew.bat` or `gradlew.bat` instead of `./gradlew`. The Gradle wrapper is
-> included so you do not need to install Gradle separately; only Java is required.
+Attribution:
+- Copyright (c) 2024 Decent Samples
 
-When the server starts, the output may prompt you to authorize your Hytale server. After that, you
-can begin developing your plugin while the server handles local development runs.
+The original source `.dspreset` used by this POC is included at:
+- `src/main/resources/hysampler/source/Simple-Preset-Library.dspreset`
 
-From here, the [HytaleModding guides](https://hytalemodding.dev/en/docs/guides/plugin/build-and-test)
-cover more details.
+## Asset pipeline used
 
-## Hytale Gradle Plugin
+1. Read DecentSampler `.dspreset` XML
+2. Extract only `<sample>` mapping attributes required for note-to-sample routing
+3. Select a minimal subset of referenced samples for the POC
+4. Convert source WAV files to OGG
+5. Place OGG files under `src/main/resources/Common/Sounds/HySampler`
+6. Register one `SoundEvent` JSON per sample under `src/main/resources/Server/SoundEvents`
+7. Resolve note+velocity at runtime, find matching `SoundEvent`, and play with optional pitch offset relative to `rootNote`
 
-This template is built around AzureDoom's `com.azuredoom.hytale-tools` Gradle plugin.
-
-The plugin is configured in `build.gradle.kts`:
-
-```kotlin
-plugins {
-    idea
-    java
-    id("com.azuredoom.hytale-tools") version "1.+"
-}
-```
-
-The AzureDoom Maven repository is configured in `settings.gradle.kts`:
-
-```kotlin
-pluginManagement {
-    repositories {
-        gradlePluginPortal()
-        mavenCentral()
-        maven {
-            name = "AzureDoom Maven"
-            url = uri("https://maven.azuredoom.com/mods")
-        }
-    }
-}
-```
-
-Most plugin-specific settings are controlled from `gradle.properties` and passed into the
-`hytaleTools` block in `build.gradle.kts`. This keeps common project metadata in one easy-to-edit
-place.
-
-For full plugin documentation, configuration options, tasks, and multi-project setup, visit the
-[Hytale Gradle Plugin repository](https://github.com/AzureDoom/Hytale-Gradle-Plugin).
-
-## Useful commands
+## Build
 
 ```bash
-# Sync/setup the local Hytale development environment
-./gradlew setupHytaleDev
-
-# Run the local Hytale server
-./gradlew runServer
-
-# Run the server with debugging and hot swap enabled
-./gradlew runServer -Ddebug=true -Dhotswap=true
-
-# Check your JVM and hot swap setup
-./gradlew hytaleJvmDoctor
-
-# Build the plugin
 ./gradlew build
-
-# Refresh dependencies if something fails to resolve
-./gradlew build --refresh-dependencies
 ```
 
-## Project structure
+## In-game usage
 
 ```text
-src/main/java/        Plugin source code
-src/main/resources/   Plugin resources, including manifest.json
-gradle.properties     Main template configuration
-build.gradle.kts      Gradle build and Hytale Gradle Plugin configuration
-settings.gradle.kts   Plugin repositories and project name
+/sampler play 60
+/sampler play 64 100
 ```
 
-## Manifest configuration
+- `note` is MIDI-style integer range `0..127`
+- `velocity` is optional (`0..127`, defaults to `127`)
 
-The generated `manifest.json` is driven by the values in `gradle.properties`, including:
+## Scope and non-goals
 
-- `manifest_group`
-- `mod_id`
-- `version`
-- `mod_description`
-- `mod_author`
-- `mod_url`
-- `main_class`
-- `manifest_dependencies`
-- `manifest_opt_dependencies`
-- `manifestServerVersion`
+Out of scope for this POC:
 
-After changing these values, run:
+- real-time oscillators / PCM synthesis
+- runtime modulation engine (LFO, vibrato, tremolo, filter sweeps)
+- DecentSampler effects, UI, envelopes, and other non-mapping sections
+- full multi-layer instrument emulation beyond basic mapping proof
 
-```bash
-./gradlew updatePluginManifest
-```
+## Useful references
 
-## Troubleshooting
-
-- **Gradle sync fails in IntelliJ** — Check that Java 25 is installed and configured under
-  **File → Project Structure → SDKs**.
-- **The Hytale Gradle Plugin does not resolve** — Make sure `settings.gradle.kts` includes the
-  AzureDoom Maven repository at `https://maven.azuredoom.com/mods`.
-- **Build fails with missing dependencies** — Run `./gradlew build --refresh-dependencies` and make
-  sure you have internet access.
-- **Permission denied on `./gradlew`** — Run `chmod +x gradlew` on macOS/Linux.
-- **Hot reload or enhanced class redefinition does not work** — Use JetBrains Runtime and try
-  `./gradlew hytaleJvmDoctor` to verify your JVM setup.
-
-## Resources
-
-- [Hytale Gradle Plugin](https://github.com/AzureDoom/Hytale-Gradle-Plugin)
-- [Hytale Modding Guides](https://hytalemodding.dev)
-- [Hytale Modding Discord](https://discord.gg/hytalemodding)
-
-## License
-
-Add your own license after copying the template. We recommend MIT, BSD, or Apache to keep the
-modding community open.
+- Hytale playing sounds guide:
+  - https://hytalemodding.dev/en/docs/guides/plugin/playing-sounds
+- Hytale plugin template:
+  - https://github.com/HytaleModding/plugin-template
+- DecentSampler docs:
+  - https://www.decentsamples.com/docs/format-documentation.html
