@@ -1,0 +1,10 @@
+{
+  "MaxDistance": 48.0,
+  "Layers": [
+    {
+      "Files": [
+        "Sounds/HySampler/polybrute_triangle_c4.ogg"
+      ]
+    }
+  ]
+}
